@@ -31,7 +31,7 @@ MOTS_CLES_VIDEO = [
 
 # ── Seuils de score ───────────────────────────────────────────────────────────
 SCORE_VIDEO_MIN       = 5     # Score minimum pour analyser une vidéo
-SCORE_PROSPECT_MIN    = 7     # Score minimum pour alerter sur un commentaire
+SCORE_PROSPECT_MIN    = 5     # Score minimum pour alerter sur un commentaire
 
 # ── Paramètres de scraping ────────────────────────────────────────────────────
 VIDEOS_PAR_HASHTAG    = 5     # Nombre de vidéos récupérées par hashtag
@@ -41,7 +41,7 @@ DELAI_MIN_SEC         = 4     # Délai minimum entre requêtes (secondes)
 DELAI_MAX_SEC         = 12    # Délai maximum entre requêtes (secondes)
 
 # ── Détection trigger words ───────────────────────────────────────────────────
-TW_OCCURRENCES_MIN    = 15
+TW_OCCURRENCES_MIN    = 8
 TW_POURCENTAGE_MIN    = 10    # % minimum des commentaires
 TW_LONGUEUR_MAX_MOTS  = 3     # Longueur max d'un commentaire trigger
 TW_RATIO_UNIQUES      = 0.8   # 80% de personnes différentes
