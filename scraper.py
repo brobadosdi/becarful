@@ -7,17 +7,10 @@ import config
 
 logger = logging.getLogger(__name__)
 
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/119.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
-    "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-]
 
-
-def _delai_aleatoire():
-    duree = random.uniform(config.DELAI_MIN_SEC, config.DELAI_MAX_SEC)
+def _delai_aleatoire(min_sec=8, max_sec=20):
+    """Pause aléatoire plus longue pour simuler un comportement humain."""
+    duree = random.uniform(min_sec, max_sec)
     logger.debug(f"Pause {duree:.1f}s")
     time.sleep(duree)
 
@@ -62,7 +55,18 @@ async def _get_commentaires_video(api: TikTokApi, video_id: str, count: int) -> 
     return commentaires
 
 
-async def scraper_hashtags(hashtags: list[str], videos_par_hashtag: int) -> list[dict]:
+async def scraper_complet(
+    hashtags: list[str],
+    videos_par_hashtag: int,
+    videos_retenues: list[dict],
+    nb_commentaires: int,
+) -> tuple[list[dict], dict[str, list[dict]]]:
+    """
+    Fait tout en UNE SEULE session TikTok :
+    1. Scrape les hashtags
+    2. Récupère les commentaires des vidéos retenues
+    Retourne (toutes_videos, commentaires_par_video)
+    """
     ms_tokens = [config.TIKTOK_MS_TOKEN] if config.TIKTOK_MS_TOKEN else None
 
     async with TikTokApi() as api:
@@ -74,48 +78,88 @@ async def scraper_hashtags(hashtags: list[str], videos_par_hashtag: int) -> list
             browser="webkit",
         )
 
+        # ── Phase 1 : Scraping des hashtags ──────────────────────────────────
         toutes_videos = []
         for hashtag in hashtags:
             videos = await _get_videos_hashtag(api, hashtag, videos_par_hashtag)
             toutes_videos.extend(videos)
-            _delai_aleatoire()
+            _delai_aleatoire(8, 20)  # Pause humaine entre les hashtags
 
-    # Dédoublonnage par ID vidéo
-    seen = set()
-    uniques = []
-    for v in toutes_videos:
-        if v["id"] not in seen:
-            seen.add(v["id"])
-            uniques.append(v)
+        # Dédoublonnage
+        seen = set()
+        uniques = []
+        for v in toutes_videos:
+            if v["id"] not in seen:
+                seen.add(v["id"])
+                uniques.append(v)
+        logger.info(f"Total vidéos uniques : {len(uniques)}")
 
-    logger.info(f"Total vidéos uniques : {len(uniques)}")
-    return uniques
+        # ── Phase 2 : Commentaires des vidéos retenues ────────────────────────
+        commentaires_par_video = {}
 
+        if videos_retenues:
+            logger.info(f"Récupération commentaires pour {len(videos_retenues)} vidéos...")
+            # Pause plus longue avant de changer d'activité (comme un humain)
+            _delai_aleatoire(15, 30)
 
-async def scraper_commentaires(api_instance, videos: list[dict], nb_commentaires: int) -> dict[str, list[dict]]:
-    resultats = {}
+            for video in videos_retenues:
+                vid_id = video["id"]
+                commentaires = await _get_commentaires_video(api, vid_id, nb_commentaires)
+                commentaires_par_video[vid_id] = commentaires
+                _delai_aleatoire(10, 25)  # Pause humaine entre chaque vidéo
 
-    async with TikTokApi() as api:
-        await api.create_sessions(
-            ms_tokens=[config.TIKTOK_MS_TOKEN] if config.TIKTOK_MS_TOKEN else None,
-            num_sessions=1,
-            sleep_after=3,
-            headless=True,
-            browser="webkit",
-        )
-
-        for video in videos:
-            vid_id = video["id"]
-            commentaires = await _get_commentaires_video(api, vid_id, nb_commentaires)
-            resultats[vid_id] = commentaires
-            _delai_aleatoire()
-
-    return resultats
+    return uniques, commentaires_par_video
 
 
-def run_scraper_hashtags(hashtags: list[str], videos_par_hashtag: int) -> list[dict]:
-    return asyncio.run(scraper_hashtags(hashtags, videos_par_hashtag))
+def run_scraper_phase1(hashtags: list[str], videos_par_hashtag: int) -> list[dict]:
+    """Phase 1 seulement — scrape les hashtags."""
+    async def _run():
+        ms_tokens = [config.TIKTOK_MS_TOKEN] if config.TIKTOK_MS_TOKEN else None
+        async with TikTokApi() as api:
+            await api.create_sessions(
+                ms_tokens=ms_tokens,
+                num_sessions=1,
+                sleep_after=3,
+                headless=True,
+                browser="webkit",
+            )
+            toutes_videos = []
+            for hashtag in hashtags:
+                videos = await _get_videos_hashtag(api, hashtag, videos_par_hashtag)
+                toutes_videos.extend(videos)
+                _delai_aleatoire(8, 20)
+
+            seen = set()
+            uniques = []
+            for v in toutes_videos:
+                if v["id"] not in seen:
+                    seen.add(v["id"])
+                    uniques.append(v)
+            logger.info(f"Total vidéos uniques : {len(uniques)}")
+            return uniques
+
+    return asyncio.run(_run())
 
 
-def run_scraper_commentaires(videos: list[dict], nb_commentaires: int) -> dict[str, list[dict]]:
-    return asyncio.run(scraper_commentaires(None, videos, nb_commentaires))
+def run_scraper_phase2(videos_retenues: list[dict], nb_commentaires: int) -> dict[str, list[dict]]:
+    """Phase 2 seulement — récupère les commentaires."""
+    async def _run():
+        ms_tokens = [config.TIKTOK_MS_TOKEN] if config.TIKTOK_MS_TOKEN else None
+        commentaires_par_video = {}
+        async with TikTokApi() as api:
+            await api.create_sessions(
+                ms_tokens=ms_tokens,
+                num_sessions=1,
+                sleep_after=3,
+                headless=True,
+                browser="webkit",
+            )
+            _delai_aleatoire(15, 30)
+            for video in videos_retenues:
+                vid_id = video["id"]
+                commentaires = await _get_commentaires_video(api, vid_id, nb_commentaires)
+                commentaires_par_video[vid_id] = commentaires
+                _delai_aleatoire(10, 25)
+        return commentaires_par_video
+
+    return asyncio.run(_run())
