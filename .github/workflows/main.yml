@@ -2,10 +2,8 @@ name: TikTok Prospection — Cycle automatique
 
 on:
   schedule:
-    # Toutes les 2 heures
     - cron: "0 */2 * * *"
   workflow_dispatch:
-    # Permet aussi de lancer manuellement depuis GitHub
 
 jobs:
   run-prospection:
@@ -21,11 +19,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 📦 Installation des dépendances
+      - name: 🔧 Installation des dépendances système
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          playwright install webkit
+          sudo apt-get update
           sudo apt-get install -y \
             libwoff1 \
             libopus0 \
@@ -40,7 +36,23 @@ jobs:
             libgles2 \
             libvpx7 \
             libevent-2.1-7 \
-            libharfbuzz-icu0
+            libharfbuzz-icu0 \
+            libgstreamer1.0-0 \
+            libgstreamer-plugins-base1.0-0 \
+            libgstreamer-plugins-bad1.0-0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-gl \
+            libflite1 \
+            libmanette-0.2-0 \
+            libx264-dev
+
+      - name: 📦 Installation des dépendances Python
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install webkit
 
       - name: 🚀 Lancement du script
         env:
@@ -49,4 +61,5 @@ jobs:
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
           GOOGLE_SHEETS_ID:   ${{ secrets.GOOGLE_SHEETS_ID }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          TIKTOK_MS_TOKEN:    ${{ secrets.TIKTOK_MS_TOKEN }}
         run: python main.py
