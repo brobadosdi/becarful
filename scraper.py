@@ -87,7 +87,7 @@ async def scraper_complet(
             ms_tokens=ms_tokens,
             num_sessions=1,
             sleep_after=8,
-            headless=True,
+            headless=False,
             browser="webkit",
             context_options=SESSION_OPTIONS,
         )
@@ -134,7 +134,7 @@ def run_scraper_phase1(hashtags: list[str], videos_par_hashtag: int) -> list[dic
                 ms_tokens=ms_tokens,
                 num_sessions=1,
                 sleep_after=8,
-                headless=True,
+                headless=False,
                 browser="webkit",
                 context_options=SESSION_OPTIONS,
             )
@@ -166,7 +166,7 @@ def run_scraper_phase2(videos_retenues: list[dict], nb_commentaires: int) -> dic
                 ms_tokens=ms_tokens,
                 num_sessions=1,
                 sleep_after=8,
-                headless=True,
+                headless=False,
                 browser="webkit",
                 context_options=SESSION_OPTIONS,
             )
