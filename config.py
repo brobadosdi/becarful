@@ -6,6 +6,7 @@ TELEGRAM_TOKEN       = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID     = os.environ.get("TELEGRAM_CHAT_ID", "")
 GOOGLE_SHEETS_ID     = os.environ.get("GOOGLE_SHEETS_ID", "")
 GOOGLE_CREDENTIALS   = os.environ.get("GOOGLE_CREDENTIALS", "")   # JSON brut
+TIKTOK_MS_TOKEN = os.environ.get("TIKTOK_MS_TOKEN", "")
 
 # ── Hashtags TikTok à surveiller ──────────────────────────────────────────────
 HASHTAGS = [
