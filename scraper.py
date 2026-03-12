@@ -78,7 +78,6 @@ async def scraper_hashtags(hashtags: list[str], videos_par_hashtag: int) -> list
             num_sessions=1,
             sleep_after=3,
             headless=True,
-            browser="webkit",
         )
 
         toutes_videos = []
@@ -111,7 +110,6 @@ async def scraper_commentaires(api_instance, videos: list[dict], nb_commentaires
             num_sessions=1,
             sleep_after=3,
             headless=True,
-            browser="webkit",
         )
 
         for video in videos:
