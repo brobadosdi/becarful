@@ -7,6 +7,13 @@ logger = logging.getLogger(__name__)
 TELEGRAM_API = f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}"
 
 
+def _echapper(texte: str) -> str:
+    """Échappe les caractères spéciaux Markdown Telegram."""
+    for char in ["_", "*", "[", "]", "`"]:
+        texte = texte.replace(char, f"\\{char}")
+    return texte
+
+
 def _envoyer_message(texte: str) -> bool:
     """Envoie un message texte sur Telegram."""
     try:
@@ -15,7 +22,7 @@ def _envoyer_message(texte: str) -> bool:
             json={
                 "chat_id":    config.TELEGRAM_CHAT_ID,
                 "text":       texte,
-                "parse_mode": "HTML",
+                "parse_mode": "Markdown",
             },
             timeout=10,
         )
@@ -30,16 +37,14 @@ def _envoyer_message(texte: str) -> bool:
 
 
 def alerter_prospect(prospect: dict, video: dict) -> bool:
-    """
-    Envoie une alerte Telegram pour un prospect détecté.
-    """
+    """Envoie une alerte Telegram pour un prospect détecté."""
     score    = prospect.get("score_ia", 0)
     type_ia  = prospect.get("type_ia", "")
-    raison   = prospect.get("raison_ia", "")
-    auteur   = prospect.get("auteur", "inconnu")
-    texte_commentaire = prospect.get("texte", "")
-    video_id = video.get("id", "")
-    video_desc = video.get("description", "")[:80]
+    raison   = _echapper(prospect.get("raison_ia", ""))
+    auteur   = _echapper(prospect.get("auteur", "inconnu"))
+    texte_commentaire = _echapper(prospect.get("texte", ""))
+    video_id  = video.get("id", "")
+    video_desc = _echapper(video.get("description", "")[:80])
 
     # Emoji selon le score
     if score >= 9:
@@ -59,23 +64,19 @@ def alerter_prospect(prospect: dict, video: dict) -> bool:
     }
     type_label = types_labels.get(type_ia, "👤 Prospect")
 
-    message = f"""{emoji} <b>PROSPECT DÉTECTÉ — Score {score}/10</b>
-
-{type_label}
-
-👤 <b>Profil :</b> @{auteur}
-🔗 <b>Profil TikTok :</b> https://www.tiktok.com/@{auteur}
-
-💬 <b>Commentaire :</b>
-<i>"{texte_commentaire}"</i>
-
-🧠 <b>Analyse IA :</b> {raison}
-
-📹 <b>Vidéo :</b> {video_desc}...
-🔗 https://www.tiktok.com/video/{video_id}
-
-─────────────────
-👉 <b>ACTION :</b> Ouvre BlueStacks et envoie un DM à @{auteur}"""
+    message = (
+        f"{emoji} *PROSPECT DÉTECTÉ — Score {score}/10*\n\n"
+        f"{type_label}\n\n"
+        f"👤 *Profil :* @{auteur}\n"
+        f"🔗 *Profil TikTok :* https://www.tiktok.com/@{auteur}\n\n"
+        f"💬 *Commentaire :*\n"
+        f"_{texte_commentaire}_\n\n"
+        f"🧠 *Analyse IA :* {raison}\n\n"
+        f"📹 *Vidéo :* {video_desc}...\n"
+        f"🔗 https://www.tiktok.com/video/{video_id}\n\n"
+        f"─────────────────\n"
+        f"👉 *ACTION :* Ouvre BlueStacks et envoie un DM à @{auteur}"
+    )
 
     succes = _envoyer_message(message)
     if succes:
@@ -84,22 +85,20 @@ def alerter_prospect(prospect: dict, video: dict) -> bool:
 
 
 def alerter_resume(stats: dict) -> bool:
-    """
-    Envoie un résumé du cycle d'analyse sur Telegram.
-    """
-    message = f"""📊 <b>Résumé du cycle</b>
-
-🎬 Vidéos analysées : {stats.get('videos_analysees', 0)}
-💬 Commentaires analysés : {stats.get('commentaires_analyses', 0)}
-🎯 Prospects détectés : {stats.get('prospects_detectes', 0)}
-🔑 Trigger words : {stats.get('trigger_words', 0)}
-
-⏱ Prochain cycle dans 2h"""
-
+    """Envoie un résumé du cycle d'analyse sur Telegram."""
+    message = (
+        f"📊 *Résumé du cycle*\n\n"
+        f"🎬 Vidéos analysées : {stats.get('videos_analysees', 0)}\n"
+        f"💬 Commentaires analysés : {stats.get('commentaires_analyses', 0)}\n"
+        f"🎯 Prospects détectés : {stats.get('prospects_detectes', 0)}\n"
+        f"🔑 Trigger words : {stats.get('trigger_words', 0)}\n\n"
+        f"⏱ Prochain cycle dans 2h"
+    )
     return _envoyer_message(message)
 
 
 def alerter_erreur(erreur: str) -> bool:
     """Alerte en cas d'erreur critique dans le script."""
-    message = f"⚠️ <b>Erreur script TikTok</b>\n\n{erreur}"
+    erreur_propre = _echapper(erreur[:300])
+    message = f"⚠️ *Erreur script TikTok*\n\n{erreur_propre}"
     return _envoyer_message(message)
