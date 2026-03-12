@@ -7,9 +7,20 @@ import config
 
 logger = logging.getLogger(__name__)
 
+MOBILE_UA = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/17.0 Mobile/15E148 Safari/604.1"
+)
+
+SESSION_OPTIONS = {
+    "viewport": {"width": 390, "height": 844},
+    "user_agent": MOBILE_UA,
+}
+
 
 def _delai_aleatoire(min_sec=8, max_sec=20):
-    """Pause aléatoire plus longue pour simuler un comportement humain."""
+    """Pause aléatoire pour simuler un comportement humain."""
     duree = random.uniform(min_sec, max_sec)
     logger.debug(f"Pause {duree:.1f}s")
     time.sleep(duree)
@@ -49,6 +60,8 @@ async def _get_commentaires_video(api: TikTokApi, video_id: str, count: int) -> 
                 "likes":    data.get("digg_count", 0),
                 "video_id": video_id,
             })
+            # Pause humaine entre chaque commentaire lu
+            await asyncio.sleep(random.uniform(0.5, 1.5))
         logger.info(f"Vidéo {video_id} → {len(commentaires)} commentaires")
     except Exception as e:
         logger.error(f"Erreur commentaires vidéo {video_id}: {e}")
@@ -73,9 +86,10 @@ async def scraper_complet(
         await api.create_sessions(
             ms_tokens=ms_tokens,
             num_sessions=1,
-            sleep_after=3,
+            sleep_after=8,
             headless=True,
             browser="webkit",
+            context_options=SESSION_OPTIONS,
         )
 
         # ── Phase 1 : Scraping des hashtags ──────────────────────────────────
@@ -83,7 +97,7 @@ async def scraper_complet(
         for hashtag in hashtags:
             videos = await _get_videos_hashtag(api, hashtag, videos_par_hashtag)
             toutes_videos.extend(videos)
-            _delai_aleatoire(8, 20)  # Pause humaine entre les hashtags
+            _delai_aleatoire(8, 20)
 
         # Dédoublonnage
         seen = set()
@@ -106,7 +120,7 @@ async def scraper_complet(
                 vid_id = video["id"]
                 commentaires = await _get_commentaires_video(api, vid_id, nb_commentaires)
                 commentaires_par_video[vid_id] = commentaires
-                _delai_aleatoire(10, 25)  # Pause humaine entre chaque vidéo
+                _delai_aleatoire(10, 25)
 
     return uniques, commentaires_par_video
 
@@ -119,9 +133,10 @@ def run_scraper_phase1(hashtags: list[str], videos_par_hashtag: int) -> list[dic
             await api.create_sessions(
                 ms_tokens=ms_tokens,
                 num_sessions=1,
-                sleep_after=3,
+                sleep_after=8,
                 headless=True,
                 browser="webkit",
+                context_options=SESSION_OPTIONS,
             )
             toutes_videos = []
             for hashtag in hashtags:
@@ -150,9 +165,10 @@ def run_scraper_phase2(videos_retenues: list[dict], nb_commentaires: int) -> dic
             await api.create_sessions(
                 ms_tokens=ms_tokens,
                 num_sessions=1,
-                sleep_after=3,
+                sleep_after=8,
                 headless=True,
                 browser="webkit",
+                context_options=SESSION_OPTIONS,
             )
             _delai_aleatoire(15, 30)
             for video in videos_retenues:
