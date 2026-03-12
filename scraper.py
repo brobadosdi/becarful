@@ -70,7 +70,7 @@ async def scraper_hashtags(hashtags: list[str], videos_par_hashtag: int) -> list
     Point d'entrée principal.
     Retourne toutes les vidéos trouvées sur les hashtags ciblés.
     """
-    ms_tokens = None  # Pas de compte requis, scraping anonyme
+    ms_tokens = [config.TIKTOK_MS_TOKEN] if config.TIKTOK_MS_TOKEN else None
 
     async with TikTokApi() as api:
         await api.create_sessions(
