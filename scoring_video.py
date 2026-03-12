@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 import config
 
 logger = logging.getLogger(__name__)
@@ -15,20 +16,12 @@ def _score_description(description: str) -> int:
 
 
 def _score_hashtag(hashtag_source: str) -> int:
-    """
-    +3 si le hashtag source est dans notre liste ciblée.
-    On l'a forcément scrappé depuis nos hashtags → toujours +3.
-    """
     if hashtag_source in config.HASHTAGS:
         return 3
     return 1
 
 
 def _score_engagement(nb_commentaires: int) -> int:
-    """
-    +1 si la vidéo a au moins 10 commentaires (signe d'engagement).
-    +2 si plus de 100 commentaires.
-    """
     if nb_commentaires >= 100:
         return 2
     if nb_commentaires >= 10:
@@ -37,10 +30,6 @@ def _score_engagement(nb_commentaires: int) -> int:
 
 
 def scorer_video(video: dict) -> dict:
-    """
-    Calcule le score de pertinence d'une vidéo.
-    Retourne la vidéo enrichie avec son score et le détail.
-    """
     s_hashtag     = _score_hashtag(video.get("hashtag_source", ""))
     s_description = _score_description(video.get("description", ""))
     s_engagement  = _score_engagement(video.get("commentaires_count", 0))
@@ -63,20 +52,31 @@ def scorer_video(video: dict) -> dict:
 
 
 def filtrer_videos(videos: list[dict], score_min: int = None) -> list[dict]:
-    """
-    Score toutes les vidéos et garde uniquement celles au-dessus du seuil.
-    """
     if score_min is None:
         score_min = config.SCORE_VIDEO_MIN
 
+    # Filtre par score
     videos_scorees = [scorer_video(v) for v in videos]
     retenues = [v for v in videos_scorees if v["score_pertinence"] >= score_min]
 
+    # Filtre par date — garder seulement les vidéos du dernier mois
+    limite_date = datetime.now() - timedelta(days=30)
+    limite_timestamp = limite_date.timestamp()
+    avant_filtre_date = len(retenues)
+    retenues = [
+        v for v in retenues
+        if v.get("createTime", 0) > limite_timestamp
+    ]
+
     logger.info(
-        f"Filtrage vidéos : {len(videos)} total → {len(retenues)} retenues "
-        f"(seuil score >= {score_min})"
+        f"Filtrage vidéos : {len(videos)} total → "
+        f"{avant_filtre_date} après score → "
+        f"{len(retenues)} après filtre date (30 jours)"
     )
 
-    # Trier par score décroissant
+    # Trier par score décroissant et limiter à 8
     retenues.sort(key=lambda v: v["score_pertinence"], reverse=True)
+    retenues = retenues[:8]
+
+    logger.info(f"→ {len(retenues)} vidéos retenues pour analyse des commentaires")
     return retenues
