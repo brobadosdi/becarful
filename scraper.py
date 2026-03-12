@@ -108,6 +108,7 @@ async def scraper_commentaires(api_instance, videos: list[dict], nb_commentaires
 
     async with TikTokApi() as api:
         await api.create_sessions(
+            ms_tokens=ms_tokens,
             num_sessions=1,
             sleep_after=3,
             headless=True,
