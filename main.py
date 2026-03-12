@@ -1,5 +1,7 @@
 import logging
 import sys
+import time
+import random
 from datetime import datetime
 
 import config
@@ -70,6 +72,11 @@ def run():
         if not videos_retenues:
             logger.warning("Aucune vidéo pertinente. Fin du cycle.")
             return
+
+        # ── PAUSE ANTI-DÉTECTION ──────────────────────────────────────────────
+        pause = random.uniform(90, 150)
+        logger.info(f"⏸️  Pause anti-détection avant commentaires : {pause:.0f}s...")
+        time.sleep(pause)
 
         # ── ÉTAPE 3 : Récupération des commentaires ───────────────────────────
         logger.info("💬 ÉTAPE 3 — Récupération des commentaires...")
