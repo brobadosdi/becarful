@@ -1,0 +1,6 @@
+TikTokApi==6.3.2
+google-generativeai==0.7.2
+gspread==6.1.2
+google-auth==2.29.0
+requests==2.31.0
+playwright==1.44.0
