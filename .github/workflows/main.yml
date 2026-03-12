@@ -1,37 +1,30 @@
 name: TikTok Prospection — Cycle automatique
-
 on:
   schedule:
     - cron: "0 */2 * * *"
   workflow_dispatch:
-
 jobs:
   run-prospection:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-
     steps:
       - name: 📥 Checkout du repo
         uses: actions/checkout@v4
-
       - name: 🐍 Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: 📦 Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: pip-${{ hashFiles('requirements.txt') }}
-
       - name: 📦 Cache Playwright webkit
         uses: actions/cache@v4
         id: cache-playwright
         with:
           path: ~/.cache/ms-playwright
           key: playwright-webkit-1.44.0
-
       - name: 🔧 Installation des dépendances système
         run: |
           sudo apt-get update
@@ -42,17 +35,15 @@ jobs:
             libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
             libgstreamer-plugins-bad1.0-0 gstreamer1.0-plugins-base \
             gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-            gstreamer1.0-gl libflite1 libmanette-0.2-0 libx264-dev
-
+            gstreamer1.0-gl libflite1 libmanette-0.2-0 libx264-dev \
+            xvfb x11-utils
       - name: 📦 Installation Python
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: 🌐 Installation Playwright webkit
         if: steps.cache-playwright.outputs.cache-hit != 'true'
         run: playwright install webkit
-
       - name: 🚀 Lancement du script
         env:
           GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
@@ -61,4 +52,8 @@ jobs:
           GOOGLE_SHEETS_ID:   ${{ secrets.GOOGLE_SHEETS_ID }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           TIKTOK_MS_TOKEN:    ${{ secrets.TIKTOK_MS_TOKEN }}
-        run: python main.py
+          DISPLAY: ":99"
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 2
+          python main.py
