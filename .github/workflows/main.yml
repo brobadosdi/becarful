@@ -25,7 +25,22 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          playwright install chromium
+          playwright install webkit
+          sudo apt-get install -y \
+            libwoff1 \
+            libopus0 \
+            libwebp7 \
+            libwebpdemux2 \
+            libenchant-2-2 \
+            libgudev-1.0-0 \
+            libsecret-1-0 \
+            libhyphen0 \
+            libgdk-pixbuf2.0-0 \
+            libegl1 \
+            libgles2 \
+            libvpx7 \
+            libevent-2.1-7 \
+            libharfbuzz-icu0
 
       - name: 🚀 Lancement du script
         env:
