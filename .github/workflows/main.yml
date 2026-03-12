@@ -25,8 +25,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
+          playwright install chromium --with-deps
 
       - name: 🚀 Lancement du script
         env:
