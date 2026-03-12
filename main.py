@@ -10,7 +10,6 @@ import analyse_ia
 import telegram_alert
 import sheets_logger
 
-# ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
@@ -21,7 +20,6 @@ logger = logging.getLogger("main")
 
 
 def verifier_config():
-    """Vérifie que toutes les variables d'environnement sont présentes."""
     requis = [
         ("GEMINI_API_KEY",     config.GEMINI_API_KEY),
         ("TELEGRAM_TOKEN",     config.TELEGRAM_TOKEN),
@@ -42,10 +40,10 @@ def run():
     logger.info("=" * 60)
 
     stats = {
-        "videos_analysees":     0,
+        "videos_analysees":      0,
         "commentaires_analyses": 0,
-        "prospects_detectes":   0,
-        "trigger_words":        0,
+        "prospects_detectes":    0,
+        "trigger_words":         0,
     }
 
     try:
@@ -53,7 +51,7 @@ def run():
 
         # ── ÉTAPE 1 : Scraping des hashtags ───────────────────────────────────
         logger.info("📡 ÉTAPE 1 — Scraping des hashtags...")
-        toutes_videos = scraper.run_scraper_hashtags(
+        toutes_videos = scraper.run_scraper_phase1(
             hashtags=config.HASHTAGS,
             videos_par_hashtag=config.VIDEOS_PAR_HASHTAG,
         )
@@ -63,8 +61,8 @@ def run():
             logger.warning("Aucune vidéo trouvée. Fin du cycle.")
             return
 
-        # ── ÉTAPE 2 : Filtrage des vidéos par score ───────────────────────────
-        logger.info("🎯 ÉTAPE 2 — Filtrage des vidéos par score de pertinence...")
+        # ── ÉTAPE 2 : Filtrage des vidéos par score + date ────────────────────
+        logger.info("🎯 ÉTAPE 2 — Filtrage des vidéos...")
         videos_retenues = scoring_video.filtrer_videos(toutes_videos)
         stats["videos_analysees"] = len(videos_retenues)
         logger.info(f"→ {len(videos_retenues)} vidéos retenues pour analyse")
@@ -75,8 +73,8 @@ def run():
 
         # ── ÉTAPE 3 : Récupération des commentaires ───────────────────────────
         logger.info("💬 ÉTAPE 3 — Récupération des commentaires...")
-        commentaires_par_video = scraper.run_scraper_commentaires(
-            videos=videos_retenues,
+        commentaires_par_video = scraper.run_scraper_phase2(
+            videos_retenues=videos_retenues,
             nb_commentaires=config.COMMENTAIRES_PAR_VIDEO,
         )
 
@@ -93,13 +91,9 @@ def run():
                 stats["trigger_words"] += len(tws)
                 logger.info(f"Vidéo {video_id} → {len(tws)} trigger word(s) détecté(s)")
 
-            # Filtrer les commentaires trigger pour ne garder que les prospects potentiels
             commentaires_nets = trigger_words.filtrer_commentaires_trigger(commentaires, tws)
-
-            # Enrichir chaque commentaire avec les infos de la vidéo
             for c in commentaires_nets:
                 c["video_id"] = video_id
-
             tous_commentaires_nets.extend(commentaires_nets)
 
         stats["commentaires_analyses"] = len(tous_commentaires_nets)
@@ -117,26 +111,22 @@ def run():
 
         # ── ÉTAPE 6 : Alertes + logging ───────────────────────────────────────
         logger.info(f"📣 ÉTAPE 6 — Envoi alertes ({len(prospects)} prospects)...")
-
         for prospect in prospects:
             video_id = prospect.get("video_id", "")
             video    = video_par_id.get(video_id, {})
-
-            # Alerte Telegram
             telegram_alert.alerter_prospect(prospect, video)
-
-            # Log Google Sheets
             sheets_logger.logger_prospect(prospect, video)
 
-        # Résumé du cycle
         telegram_alert.alerter_resume(stats)
 
         duree = (datetime.now() - debut).seconds
         logger.info("=" * 60)
         logger.info(f"✅ Cycle terminé en {duree}s")
-        logger.info(f"   Vidéos : {stats['videos_analysees']} | "
-                    f"Commentaires : {stats['commentaires_analyses']} | "
-                    f"Prospects : {stats['prospects_detectes']}")
+        logger.info(
+            f"   Vidéos : {stats['videos_analysees']} | "
+            f"Commentaires : {stats['commentaires_analyses']} | "
+            f"Prospects : {stats['prospects_detectes']}"
+        )
         logger.info("=" * 60)
 
     except EnvironmentError as e:
