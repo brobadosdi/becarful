@@ -1,12 +1,15 @@
 import os
+from dotenv import load_dotenv
 
-# ── Credentials (injectés depuis GitHub Secrets) ──────────────────────────────
+load_dotenv()
+
+# ── Credentials ───────────────────────────────────────────────────────────────
 GEMINI_API_KEY       = os.environ.get("GEMINI_API_KEY", "")
 TELEGRAM_TOKEN       = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID     = os.environ.get("TELEGRAM_CHAT_ID", "")
 GOOGLE_SHEETS_ID     = os.environ.get("GOOGLE_SHEETS_ID", "")
 GOOGLE_CREDENTIALS   = os.environ.get("GOOGLE_CREDENTIALS", "")   # JSON brut
-TIKTOK_MS_TOKEN = os.environ.get("TIKTOK_MS_TOKEN", "")
+TIKTOK_MS_TOKEN      = os.environ.get("TIKTOK_MS_TOKEN", "")
 
 # ── Hashtags TikTok à surveiller ──────────────────────────────────────────────
 HASHTAGS = [
@@ -30,22 +33,22 @@ MOTS_CLES_VIDEO = [
 ]
 
 # ── Seuils de score ───────────────────────────────────────────────────────────
-SCORE_VIDEO_MIN       = 5     # Score minimum pour analyser une vidéo
-SCORE_PROSPECT_MIN    = 5     # Score minimum pour alerter sur un commentaire
+SCORE_VIDEO_MIN        = 5
+SCORE_PROSPECT_MIN     = 5
 
 # ── Paramètres de scraping ────────────────────────────────────────────────────
-VIDEOS_PAR_HASHTAG    = 5     # Nombre de vidéos récupérées par hashtag
-COMMENTAIRES_PAR_VIDEO = 50   # Nombre de commentaires récupérés par vidéo
-BATCH_COMMENTAIRES    = 50    # Taille du batch envoyé à Gemini
-DELAI_MIN_SEC         = 4     # Délai minimum entre requêtes (secondes)
-DELAI_MAX_SEC         = 12    # Délai maximum entre requêtes (secondes)
+VIDEOS_PAR_HASHTAG     = 5
+COMMENTAIRES_PAR_VIDEO = 50
+BATCH_COMMENTAIRES     = 50
+DELAI_MIN_SEC          = 4
+DELAI_MAX_SEC          = 12
 
 # ── Détection trigger words ───────────────────────────────────────────────────
-TW_OCCURRENCES_MIN    = 8
-TW_POURCENTAGE_MIN    = 10    # % minimum des commentaires
-TW_LONGUEUR_MAX_MOTS  = 3     # Longueur max d'un commentaire trigger
-TW_RATIO_UNIQUES      = 0.8   # 80% de personnes différentes
-TW_SCORE_LEGITIME_MIN = 4     # Score de légitimité minimum
+TW_OCCURRENCES_MIN     = 8
+TW_POURCENTAGE_MIN     = 10
+TW_LONGUEUR_MAX_MOTS   = 3
+TW_RATIO_UNIQUES       = 0.8
+TW_SCORE_LEGITIME_MIN  = 4
 
 # ── Prompt Gemini ─────────────────────────────────────────────────────────────
 PROMPT_SYSTEME = """
