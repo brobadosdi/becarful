@@ -26,6 +26,22 @@ def _delai_aleatoire(min_sec=8, max_sec=20):
     time.sleep(duree)
 
 
+async def _naviguer_vers_video(api: TikTokApi, auteur: str, video_id: str):
+    """
+    Navigue vers la page de la vidéo avant de récupérer les commentaires.
+    Simule un vrai utilisateur qui ouvre la vidéo avant de lire les commentaires.
+    """
+    try:
+        page = api.sessions[0].page
+        url = f"https://www.tiktok.com/@{auteur}/video/{video_id}"
+        logger.debug(f"Navigation vers {url}")
+        await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+        # Pause pour simuler le visionnage partiel de la vidéo
+        await asyncio.sleep(random.uniform(3, 7))
+    except Exception as e:
+        logger.warning(f"Navigation échouée pour vidéo {video_id}: {e} — on tente quand même les commentaires")
+
+
 async def _get_videos_hashtag(api: TikTokApi, hashtag: str, count: int) -> list[dict]:
     videos = []
     try:
@@ -47,11 +63,21 @@ async def _get_videos_hashtag(api: TikTokApi, hashtag: str, count: int) -> list[
     return videos
 
 
-async def _get_commentaires_video(api: TikTokApi, video_id: str, count: int) -> list[dict]:
+async def _get_commentaires_video(api: TikTokApi, video: dict, count: int) -> list[dict]:
+    """
+    Navigue vers la page de la vidéo, puis récupère les commentaires.
+    Le paramètre video est un dict avec 'id' et 'auteur'.
+    """
+    video_id = video["id"]
+    auteur = video.get("auteur", "tiktok")
     commentaires = []
+
     try:
-        video = api.video(id=video_id)
-        async for comment in video.comments(count=count):
+        # Étape clé : naviguer vers la vidéo comme un vrai utilisateur
+        await _naviguer_vers_video(api, auteur, video_id)
+
+        v = api.video(id=video_id)
+        async for comment in v.comments(count=count):
             data = comment.as_dict
             commentaires.append({
                 "id":       data.get("cid", ""),
@@ -62,6 +88,7 @@ async def _get_commentaires_video(api: TikTokApi, video_id: str, count: int) -> 
             })
             # Pause humaine entre chaque commentaire lu
             await asyncio.sleep(random.uniform(0.5, 1.5))
+
         logger.info(f"Vidéo {video_id} → {len(commentaires)} commentaires")
     except Exception as e:
         logger.error(f"Erreur commentaires vidéo {video_id}: {e}")
@@ -74,12 +101,6 @@ async def scraper_complet(
     videos_retenues: list[dict],
     nb_commentaires: int,
 ) -> tuple[list[dict], dict[str, list[dict]]]:
-    """
-    Fait tout en UNE SEULE session TikTok :
-    1. Scrape les hashtags
-    2. Récupère les commentaires des vidéos retenues
-    Retourne (toutes_videos, commentaires_par_video)
-    """
     ms_tokens = [config.TIKTOK_MS_TOKEN] if config.TIKTOK_MS_TOKEN else None
 
     async with TikTokApi() as api:
@@ -92,14 +113,12 @@ async def scraper_complet(
             context_options=SESSION_OPTIONS,
         )
 
-        # ── Phase 1 : Scraping des hashtags ──────────────────────────────────
         toutes_videos = []
         for hashtag in hashtags:
             videos = await _get_videos_hashtag(api, hashtag, videos_par_hashtag)
             toutes_videos.extend(videos)
             _delai_aleatoire(8, 20)
 
-        # Dédoublonnage
         seen = set()
         uniques = []
         for v in toutes_videos:
@@ -108,18 +127,13 @@ async def scraper_complet(
                 uniques.append(v)
         logger.info(f"Total vidéos uniques : {len(uniques)}")
 
-        # ── Phase 2 : Commentaires des vidéos retenues ────────────────────────
         commentaires_par_video = {}
-
         if videos_retenues:
             logger.info(f"Récupération commentaires pour {len(videos_retenues)} vidéos...")
-            # Pause plus longue avant de changer d'activité (comme un humain)
             _delai_aleatoire(15, 30)
-
             for video in videos_retenues:
-                vid_id = video["id"]
-                commentaires = await _get_commentaires_video(api, vid_id, nb_commentaires)
-                commentaires_par_video[vid_id] = commentaires
+                commentaires = await _get_commentaires_video(api, video, nb_commentaires)
+                commentaires_par_video[video["id"]] = commentaires
                 _delai_aleatoire(10, 25)
 
     return uniques, commentaires_par_video
@@ -157,7 +171,7 @@ def run_scraper_phase1(hashtags: list[str], videos_par_hashtag: int) -> list[dic
 
 
 def run_scraper_phase2(videos_retenues: list[dict], nb_commentaires: int) -> dict[str, list[dict]]:
-    """Phase 2 seulement — récupère les commentaires."""
+    """Phase 2 seulement — récupère les commentaires en naviguant vers chaque vidéo d'abord."""
     async def _run():
         ms_tokens = [config.TIKTOK_MS_TOKEN] if config.TIKTOK_MS_TOKEN else None
         commentaires_par_video = {}
@@ -172,9 +186,8 @@ def run_scraper_phase2(videos_retenues: list[dict], nb_commentaires: int) -> dic
             )
             _delai_aleatoire(15, 30)
             for video in videos_retenues:
-                vid_id = video["id"]
-                commentaires = await _get_commentaires_video(api, vid_id, nb_commentaires)
-                commentaires_par_video[vid_id] = commentaires
+                commentaires = await _get_commentaires_video(api, video, nb_commentaires)
+                commentaires_par_video[video["id"]] = commentaires
                 _delai_aleatoire(10, 25)
         return commentaires_par_video
 
